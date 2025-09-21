@@ -2,7 +2,6 @@ import os
 import csv
 import kagglehub
 import pandas as pd
-import numpy as np
 
 def baixar_dataset(nome_arquivo: str = "data.csv"):
     try:
@@ -61,13 +60,49 @@ def melhorar_exploracao_dados (dados):
             [linha.get("Country") for linha in dados [:5]]
         ):
             print(f" ID:{id} - Descricao do Produto: {desc} | Quantidade: {qtd} | UF: {uf}")
+
     # Quero agora a quantidade de IDs unicos, produtos unicos 
     # Quero a analise da quantidade de produtos pedidos por UF
     # Quero a analise de quantidade dos produtos por ano, mês
     # Preco arrecadado por produto por ano
+def analise_avancada(dados):
+    df = pd.DataFrame(dados)
+    if not dados:
+         print("❌ Nenhumm dado para ser analisado")
+         return
+    else:
+        df['Quantity'] = pd.to_numeric(df['Quantity'], errors='coerce')
+        df['UnitPrice'] = pd.to_numeric(df['UnitPrice'], errors='coerce')
+        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'],errors='coerce')
+        df = df.dropna(subset=['InvoiceDate'])
+
+        print("\n === 📊 Análise Quantitativa ===")
+
+        qtd_pedidos = df["InvoiceNo"].nunique()
+        print(f"Total de pedidos: {qtd_pedidos}")
+
+        qtd_total_produtos = df["InvoiceNo"].count()
+        print(f"Total de pedidos: {qtd_total_produtos}")
+
+        qtd_produtos = df["Description"].nunique()
+        print(f"Total de produtos: {qtd_produtos}")
+
+        qtd_clientes = df["CustomerID"].nunique()
+        print(f"Total de clientes:  {qtd_clientes}")
+
+        qtd_uf = df["Country"].nunique()
+        print(f"Total de UFs: {qtd_uf}")
+
+
+        df['Ano'] = df['InvoiceDate'].dt.year
+        df['Mes'] = df['InvoiceDate'].dt.month
+        qtd_por_ano_mes = df.groupby(['Ano','Mes'])['Quantity'].sum().sort_index()
+        print("Total de produtos vendidos por ano e mês")
+        print(qtd_por_ano_mes)
 # Main
 if __name__ == "__main__":
     print("\n=== Primeiras linhas do CSV ===")
     dados = baixar_dataset("data.csv")
     explorar_dados(dados)
     melhorar_exploracao_dados(dados)
+    analise_avancada(dados)
