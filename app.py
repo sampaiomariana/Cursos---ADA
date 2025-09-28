@@ -64,7 +64,7 @@ def melhorar_exploracao_dados (dados):
     # Quero agora a quantidade de IDs unicos, produtos unicos 
     # Quero a analise da quantidade de produtos pedidos por UF
     # Quero a analise de quantidade dos produtos por ano, mês
-    # Preco arrecadado por produto por ano
+    # Lucro arrecadado por produto por ano ( unit price * quantidade)
 def analise_avancada(dados):
     df = pd.DataFrame(dados)
     if not dados:
@@ -79,7 +79,7 @@ def analise_avancada(dados):
         print("\n === 📊 Análise Quantitativa ===")
 
         qtd_pedidos = df["InvoiceNo"].nunique()
-        print(f"Total de pedidos: {qtd_pedidos}")
+        print(f"Total de pedidos únicos: {qtd_pedidos}")
 
         qtd_total_produtos = df["InvoiceNo"].count()
         print(f"Total de pedidos: {qtd_total_produtos}")
@@ -99,6 +99,49 @@ def analise_avancada(dados):
         qtd_por_ano_mes = df.groupby(['Ano','Mes'])['Quantity'].sum().sort_index()
         print("Total de produtos vendidos por ano e mês")
         print(qtd_por_ano_mes)
+
+        #Quantidade de produtos por UF
+        df['Ano'] = df['InvoiceDate'].dt.year
+        df['Mes'] = df['InvoiceDate'].dt.month
+        df['Pais'] = df["Country"]
+        df['Produto'] = df['Description']
+        #Os itens negativos referem-se a devoluções, para filtrar quantidade > 0
+        df_vendas = df[df['Quantity'] > 0]
+        qtd_produto_ano_mes = df_vendas.groupby(['Ano','Mes','Pais','Produto'])['Quantity'].sum().reset_index().rename(columns={'Quantity':'Vendidos'})
+        print("\n === 📊 Total de produtos vendidos por por UF ano e mês ===")
+        print(qtd_produto_ano_mes.reset_index())
+        qtd_produto_ano_mes.to_csv("qtd_produto_ano_mes.csv", index=True)
+        #Analise dos itens devolvidos
+        df_devolucao = df[df['Quantity'] < 0]
+        qtd_devolucao_ano_mes = df_devolucao.groupby(['Ano','Mes','Pais','Produto'])['Quantity'].sum().reset_index().rename(columns={'Quantity': 'Devolvidos'})
+        print("\n === 📊 Total de produtos devolvidos ===")
+        print(qtd_devolucao_ano_mes.reset_index())
+        qtd_devolucao_ano_mes.to_csv("qtd_devolucao_ano_mes.csv", index=True)
+        #Produto final 
+        qtd_final =pd.merge(
+            qtd_produto_ano_mes,
+            qtd_devolucao_ano_mes,
+            on=['Ano','Mes','Pais','Produto'],
+            how='outer'
+        ).fillna(0)
+        qtd_final['Produto_Final'] = qtd_final['Vendidos'] + qtd_final['Devolvidos']
+        print("\n ===📊 Produtos finais (Vendidos - Devolvidos) ===")
+        print(qtd_final)
+        qtd_final.to_csv("qtd_final_produtos.csv", index=True)
+
+        #Lucro dos produtos por UF por ano e por mes
+        df['Ano'] = df['InvoiceDate'].dt.year
+        df['Mes'] = df['InvoiceDate'].dt.month
+        df['Pais'] = df["Country"]
+        df['Produto'] = df['Description']
+
+        df['Lucro'] = df['Quantity'] * df['UnitPrice']
+
+        qtd_lucro_ano_mes = df.groupby(['Ano','Mes','Pais','Produto'])['Lucro'].sum().sort_index()
+        print("\n === 📊 Lucro total por UF ano e mês ===")
+        print(qtd_lucro_ano_mes.reset_index())
+        qtd_lucro_ano_mes.to_csv("qtd_lucro_ano_mes.csv", index=True)
+
 # Main
 if __name__ == "__main__":
     print("\n=== Primeiras linhas do CSV ===")
