@@ -20,7 +20,6 @@ def baixar_dataset(nome_arquivo: str = "data.csv"):
                 if i == 4:
                     break
         print(f"✅ CSV '{nome_arquivo}' carregado com sucesso!")
-    #    print(f"Total de linhas: {len(dados)}")
         return dados
     except Exception as e:
         print(f"❌ Erro ao carregar o CSV: {e}")
@@ -93,30 +92,34 @@ def analise_avancada(dados):
         qtd_uf = df["Country"].nunique()
         print(f"Total de UFs: {qtd_uf}")
 
-
         df['Ano'] = df['InvoiceDate'].dt.year
         df['Mes'] = df['InvoiceDate'].dt.month
         qtd_por_ano_mes = df.groupby(['Ano','Mes'])['Quantity'].sum().sort_index()
         print("Total de produtos vendidos por ano e mês")
         print(qtd_por_ano_mes)
-
+        
+        #A partir dessa análise usar para o relatório e adaptar o código usando map/filter/reduce
         #Quantidade de produtos por UF
         df['Ano'] = df['InvoiceDate'].dt.year
         df['Mes'] = df['InvoiceDate'].dt.month
         df['Pais'] = df["Country"]
         df['Produto'] = df['Description']
+        
         #Os itens negativos referem-se a devoluções, para filtrar quantidade > 0
         df_vendas = df[df['Quantity'] > 0]
+        
         qtd_produto_ano_mes = df_vendas.groupby(['Ano','Mes','Pais','Produto'])['Quantity'].sum().reset_index().rename(columns={'Quantity':'Vendidos'})
         print("\n === 📊 Total de produtos vendidos por por UF ano e mês ===")
         print(qtd_produto_ano_mes.reset_index())
         qtd_produto_ano_mes.to_csv("qtd_produto_ano_mes.csv", index=True)
+        
         #Analise dos itens devolvidos
         df_devolucao = df[df['Quantity'] < 0]
         qtd_devolucao_ano_mes = df_devolucao.groupby(['Ano','Mes','Pais','Produto'])['Quantity'].sum().reset_index().rename(columns={'Quantity': 'Devolvidos'})
         print("\n === 📊 Total de produtos devolvidos ===")
         print(qtd_devolucao_ano_mes.reset_index())
         qtd_devolucao_ano_mes.to_csv("qtd_devolucao_ano_mes.csv", index=True)
+        
         #Produto final 
         qtd_final =pd.merge(
             qtd_produto_ano_mes,
@@ -128,19 +131,54 @@ def analise_avancada(dados):
         print("\n ===📊 Produtos finais (Vendidos - Devolvidos) ===")
         print(qtd_final)
         qtd_final.to_csv("qtd_final_produtos.csv", index=True)
-
-        #Lucro dos produtos por UF por ano e por mes
+    
+        # Lucro dos produtos por UF, ano e mês
         df['Ano'] = df['InvoiceDate'].dt.year
         df['Mes'] = df['InvoiceDate'].dt.month
         df['Pais'] = df["Country"]
         df['Produto'] = df['Description']
-
         df['Lucro'] = df['Quantity'] * df['UnitPrice']
 
-        qtd_lucro_ano_mes = df.groupby(['Ano','Mes','Pais','Produto'])['Lucro'].sum().sort_index()
-        print("\n === 📊 Lucro total por UF ano e mês ===")
-        print(qtd_lucro_ano_mes.reset_index())
-        qtd_lucro_ano_mes.to_csv("qtd_lucro_ano_mes.csv", index=True)
+        # Considera apenas vendas com lucro positivo (descarta devoluções e erros)
+        df_vendas = df[df['Lucro'] > 0]
+
+        # Quantidade total de produtos vendidos (apenas lucro)
+        qtd_vendidos_ano_mes = (
+            df_vendas.groupby(['Ano','Mes','Pais','Produto'])['Quantity']
+            .sum()
+            .reset_index()
+            .rename(columns={'Quantity': 'Vendidos'})
+        )
+        print("\n === 📊 Total de produtos vendidos (somente lucro) por UF, ano e mês ===")
+        print(qtd_vendidos_ano_mes)
+        qtd_vendidos_ano_mes.to_csv("qtd_vendidos_ano_mes.csv", index=False)
+
+        # Lucro total (apenas positivo)
+        qtd_lucro_ano_mes = (
+            df_vendas.groupby(['Ano','Mes','Pais','Produto'])['Lucro']
+            .sum()
+            .reset_index()
+            .sort_values(['Ano','Mes'])
+        )
+        print("\n === 📊 Lucro total (somente positivo) por UF, ano e mês ===")
+        print(qtd_lucro_ano_mes)
+        qtd_lucro_ano_mes.to_csv("qtd_lucro_ano_mes.csv", index=False)
+
+def crud (dados):
+    df = pd.DataFrame(dados)
+    if not dados:
+         print("❌ Nenhumm dado para ser analisado")
+         return
+    else:
+        print("CRUD")    
+
+def relatorio_final (dados):
+    df = pd.DataFrame(dados)
+    if not dados:
+         print("❌ Nenhumm dado para ser analisado")
+         return
+    else:
+        print("Relatório Final")    
 
 # Main
 if __name__ == "__main__":
