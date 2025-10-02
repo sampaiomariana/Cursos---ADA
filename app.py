@@ -164,26 +164,150 @@ def analise_avancada(dados):
         print(qtd_lucro_ano_mes)
         qtd_lucro_ano_mes.to_csv("qtd_lucro_ano_mes.csv", index=False)
 
-def crud (dados):
-    df = pd.DataFrame(dados)
+def crud(dados):
     if not dados:
-         print("❌ Nenhumm dado para ser analisado")
-         return
-    else:
-        print("CRUD")    
+        print("❌ Nenhum dado para ser analisado")
+        return
+    
+    df = pd.DataFrame(dados)
 
-def relatorio_final (dados):
+    while True:
+        print("\n=== 📌 CRUD Básico ===")
+        print("1 - Listar registros")
+        print("2 - Inserir novo registro")
+        print("3 - Atualizar registro")
+        print("4 - Deletar registro")
+        print("0 - Voltar ao menu principal")
+
+        opcao = input("\nEscolha uma opção: ")
+
+        if opcao == "1":
+            print("\n--- 📋 Listagem dos 5 primeiros registros ---")
+            print(df.head())
+
+        elif opcao == "2":
+            print("\n--- ➕ Inserir novo registro ---")
+            novo = {}
+            for coluna in df.columns:
+                novo[coluna] = input(f"{coluna}: ")
+            df = pd.concat([df, pd.DataFrame([novo])], ignore_index=True)
+            print("✅ Registro inserido com sucesso!")
+
+        elif opcao == "3":
+            print("\n---  Atualizar registro ---")
+            idx = int(input("Informe o índice (linha) do registro que deseja atualizar: "))
+            if 0 <= idx < len(df):
+                print("Valores atuais:")
+                print(df.loc[idx])
+                coluna = input("Qual coluna deseja atualizar? ")
+                if coluna in df.columns:
+                    novo_valor = input(f"Novo valor para {coluna}: ")
+                    df.at[idx, coluna] = novo_valor
+                    print("✅ Registro atualizado com sucesso!")
+                else:
+                    print("❌ Coluna inválida.")
+            else:
+                print("❌ Índice fora do intervalo.")
+
+        elif opcao == "4":
+            print("\n---  Deletar registro ---")
+            idx = int(input("Informe o índice (linha) do registro que deseja deletar: "))
+            if 0 <= idx < len(df):
+                df = df.drop(idx).reset_index(drop=True)
+                print("✅ Registro deletado com sucesso!")
+            else:
+                print("❌ Índice fora do intervalo.")
+
+        elif opcao == "0":
+            print("Voltando ao menu principal...")
+            break
+
+        else:
+            print("❌ Opção inválida! Tente novamente.")
+    
+
+def relatorio_final(dados):
     df = pd.DataFrame(dados)
     if not dados:
-         print("❌ Nenhumm dado para ser analisado")
-         return
+        print("❌ Nenhum dado para ser analisado")
+        return
     else:
-        print("Relatório Final")    
+        print("\n=== 📊 Relatório Final ===")
+
+        # Conversão de tipos
+        df['Quantity'] = pd.to_numeric(df['Quantity'], errors='coerce')
+        df['UnitPrice'] = pd.to_numeric(df['UnitPrice'], errors='coerce')
+        df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'], errors='coerce')
+        df = df.dropna(subset=['InvoiceDate'])
+
+        # Criando colunas auxiliares
+        df['Ano'] = df['InvoiceDate'].dt.year
+        df['Mes'] = df['InvoiceDate'].dt.month
+        df['Pais'] = df["Country"]
+        df['Produto'] = df['Description']
+        df['Lucro'] = df['Quantity'] * df['UnitPrice']
+
+        # Considera apenas vendas com lucro positivo
+        df_vendas = df[df['Lucro'] > 0]
+
+        # --- Escolhendo anos específicos ---
+        ano_especifico_1 = 2010
+        ano_especifico_2 = 2011
+
+        # Lista de anos extraídos
+        anos_extraidos = list(df_vendas['Ano'])
+
+        # Usando filter para pegar cada ano
+        vendas_2010 = list(filter(lambda aux: aux == ano_especifico_1, anos_extraidos))
+        vendas_2011 = list(filter(lambda aux: aux == ano_especifico_2, anos_extraidos))
+
+        print(f"Quantidade de vendas em {ano_especifico_1}: {len(vendas_2010)}")
+        print(f"Quantidade de vendas em {ano_especifico_2}: {len(vendas_2011)}")
+
+        # Lucro total por ano (com reduce)
+        from functools import reduce
+        lucro_2010 = reduce(lambda acc, linha: acc + linha, 
+                            df_vendas[df_vendas['Ano'] == ano_especifico_1]['Lucro'], 0)
+        lucro_2011 = reduce(lambda acc, linha: acc + linha, 
+                            df_vendas[df_vendas['Ano'] == ano_especifico_2]['Lucro'], 0)
+
+        print(f"Lucro total em {ano_especifico_1}: {lucro_2010:,.2f}")
+        print(f"Lucro total em {ano_especifico_2}: {lucro_2011:,.2f}")
+
+        # Criando um "indicador" (exemplo: crescimento do lucro de 2010 para 2011)
+        if lucro_2011 > 0:
+            crescimento = ((lucro_2011 - lucro_2010) / lucro_2010) * 100
+            print(f"Indicador de crescimento de {ano_especifico_1} para {ano_especifico_2}: {crescimento:.2f}%")
+        else:
+            print("Não foi possível calcular o indicador de crescimento (lucro 2010 é zero ou negativo).")
+
 
 # Main
 if __name__ == "__main__":
-    print("\n=== Primeiras linhas do CSV ===")
     dados = baixar_dataset("data.csv")
-    explorar_dados(dados)
-    melhorar_exploracao_dados(dados)
-    analise_avancada(dados)
+    print("\n=== Menu de opções ===")
+    print("1 - Análise de Dados")
+    print("2 - CRUD")
+    print("3 - Relatorio Final")
+
+    try:
+        opcao = int(input("\n Digite a opção desejada: "))
+        
+
+        if opcao == 1:
+            print ("---- Análise de dados ----")
+            explorar_dados(dados)
+            melhorar_exploracao_dados(dados)
+            analise_avancada(dados)
+        elif opcao == 2:
+            print ("---- CRUD ----")
+            crud(dados)
+        elif opcao == 3:
+            print ("---- Relatorio final ----")
+            relatorio_final(dados)
+        
+        else:
+            print("❌ Opção inválida! Escolha 1, 2 ou 3.")
+
+    except ValueError:
+        print("❌ Digite apenas números (1, 2 ou 3).")
